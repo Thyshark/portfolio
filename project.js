@@ -3,7 +3,7 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 function fetchProjects() {
-    fetch('php/get_projects.php')
+    fetch('php/get_project.php')
         .then(response => response.json())
         .then(data => {
             displayProjects(data);

@@ -2,7 +2,6 @@
 header('Content-Type: application/json');
 require_once 'db_connect.php';
 
-// Initialize response array
 $response = [
     'success' => false,
     'message' => '',
@@ -22,7 +21,7 @@ $email = trim(filter_input(INPUT_POST, 'email', FILTER_SANITIZE_EMAIL));
 $subject = trim(filter_input(INPUT_POST, 'subject', FILTER_SANITIZE_STRING));
 $message = trim(filter_input(INPUT_POST, 'message', FILTER_SANITIZE_STRING));
 
-// Validate fields
+// Validate required fields
 if (empty($name)) {
     $response['errors']['name'] = 'Name is required';
 }
@@ -45,35 +44,47 @@ if (!empty($response['errors'])) {
 }
 
 try {
-    // Prepare and execute SQL statement
+    // Prepare SQL statement with additional fields
     $stmt = $conn->prepare(
         "INSERT INTO contact_messages 
-        (name, email, subject, message) 
-        VALUES (:name, :email, :subject, :message)"
+        (name, email, subject, message, ip_address) 
+        VALUES (:name, :email, :subject, :message, :ip_address)"
     );
 
+    // Get client IP address
+    $ip_address = $_SERVER['REMOTE_ADDR'];
+
+    // Execute with bound parameters
     $stmt->execute([
         ':name' => $name,
         ':email' => $email,
         ':subject' => $subject,
-        ':message' => $message
+        ':message' => $message,
+        ':ip_address' => $ip_address
     ]);
 
     // Set success response
     $response['success'] = true;
     $response['message'] = 'Thank you for your message! I will get back to you soon.';
 
-    // Send email notification (silenced to prevent error exposure)
+    // Send email notification (using PHPMailer recommended for production)
     $to = 'mr.ken.kimiri@gmail.com';
-    $emailSubject = 'New Portfolio Contact: ' . ($subject ?: 'No Subject');
-    $emailBody = "Name: $name\nEmail: $email\n\nMessage:\n$message";
-    $headers = "From: $email\r\nReply-To: $email";
+    $emailSubject = 'New Contact: ' . ($subject ?: 'No Subject');
+    $emailBody = "
+        Name: $name\n
+        Email: $email\n
+        IP Address: $ip_address\n\n
+        Message:\n$message
+    ";
+    $headers = "From: $email\r\n";
+    $headers .= "Reply-To: $email\r\n";
+    $headers .= "X-Mailer: PHP/" . phpversion();
 
     @mail($to, $emailSubject, $emailBody, $headers);
 
 } catch (PDOException $e) {
     // Log detailed error for admin
-    error_log('Contact Form Error: ' . $e->getMessage());
+    error_log('[' . date('Y-m-d H:i:s') . '] Contact Form Error: ' . $e->getMessage());
 
     // Generic error message for user
     $response['message'] = 'An error occurred while processing your request. Please try again later.';

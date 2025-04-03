@@ -1,7 +1,7 @@
 <?php
 $host = 'localhost';
 $username = 'portfolio_user';
-$password = 'asdfr';
+$password = 'secure_password';
 $database = 'portfolio_db';
 
 try {
